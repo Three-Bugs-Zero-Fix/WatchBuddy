@@ -86,6 +86,7 @@ function App() {
       showsVerticalScrollIndicator={false}
     >
       {/* Navigation */}
+
       <View style={styles.navbar}>
         <View style={styles.logoContainer}>
           <View style={styles.logoIcon}>
@@ -95,10 +96,13 @@ function App() {
           <AnimatedBrandText />
         </View>
 
-        <Text style={styles.navTagline}>
-          Your friends. Your videos. Together.
-        </Text>
+        {isWide && (
+          <Text style={styles.navTagline}>
+            Your friends. Your videos. Together.
+          </Text>
+        )}
       </View>
+
 
       {/* Hero */}
       <View
@@ -320,7 +324,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 11,
-    overflow: 'hidden',
   },
   logoIcon: {
     width: 38,
