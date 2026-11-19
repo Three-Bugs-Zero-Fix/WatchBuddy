@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { Colors, Fonts } from './theme';
+import introVideo from './assets/intro.mp4';
 
 const features = [
   {
@@ -208,17 +209,19 @@ function App() {
             </View>
 
             <View style={styles.videoPlaceholder}>
-              <View style={styles.playCircle}>
-                <Text style={styles.playIcon}>▶</Text>
-              </View>
-
-              <Text style={styles.videoTitle}>
-                Movie Night
-              </Text>
-
-              <Text style={styles.videoSubtitle}>
-                Better moments, together.
-              </Text>
+              <video
+                src={introVideo}
+                autoPlay
+                muted
+                loop
+                playsInline
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  borderRadius: 13,
+                }}
+              />
             </View>
 
             <View style={styles.visualBottom}>
