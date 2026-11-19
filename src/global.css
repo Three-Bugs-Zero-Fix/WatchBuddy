@@ -1,0 +1,55 @@
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  background: linear-gradient(
+    125deg,
+    #100B24 0%,
+    #1D1740 55%,
+    #172B67 100%
+  );
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.brand-text-container {
+  overflow: hidden;
+}
+
+.brand-text {
+  display: inline-block;
+  animation: brandSlide 6.4s linear infinite;
+}
+
+@keyframes brandSlide {
+  /* Enter */
+  0% {
+    transform: translateX(-150px);
+    opacity: 0;
+  }
+
+  10.94% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  /* Stay visible for 5 seconds */
+  89.06% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  /* Exit */
+  100% {
+    transform: translateX(-150px);
+    opacity: 0;
+  }
+}
