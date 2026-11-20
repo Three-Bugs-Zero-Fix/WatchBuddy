@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   View,
@@ -9,11 +8,20 @@ import {
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 
 import { Colors, Fonts } from './theme';
+import { createRoom, joinRoom } from './services/rooms';
+import RoomScreen from './screens/RoomScreen';
 import introVideo from './assets/intro.mp4';
 
-const features = [
+interface FeatureItem {
+  title: string;
+  description: string;
+  symbol: string;
+}
+
+const FEATURES: FeatureItem[] = [
   {
     title: 'Synchronized Watching',
     description: 'Watch every moment together. Playback stays in sync for everyone.',
@@ -31,6 +39,11 @@ const features = [
   },
 ];
 
+const PREVIEW_AVATARS = ['A', 'J', 'S', '+'];
+
+/**
+ * Renders the animated brand name in the navigation bar.
+ */
 function AnimatedBrandText() {
   return (
     <div className="brand-text-container">
@@ -49,24 +62,46 @@ function AnimatedBrandText() {
   );
 }
 
-function App() {
+/**
+ * Landing screen where users enter their display name to create or join a room.
+ */
+function HomeScreen() {
   const { width } = useWindowDimensions();
   const isWide = width >= 850;
+  const navigate = useNavigate();
 
   const [guestName, setGuestName] = useState('');
   const [roomCode, setRoomCode] = useState('');
   const [notice, setNotice] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
 
-  const handleCreateRoom = () => {
+  const isBusy = isCreating || isJoining;
+  const currentYear = new Date().getFullYear();
+
+  // Create a new room in Firebase RTDB and navigate to the room screen
+  const handleCreateRoom = async () => {
     if (!guestName.trim()) {
       setNotice('Please enter your name first.');
       return;
     }
 
-    setNotice('Room creation will be connected in the next module.');
+    try {
+      setIsCreating(true);
+      setNotice('');
+      const { roomCode: newCode } = await createRoom(guestName);
+      navigate(`/room/${newCode}`);
+    } catch (error) {
+      setNotice(
+        error instanceof Error ? error.message : 'Failed to create room.',
+      );
+    } finally {
+      setIsCreating(false);
+    }
   };
 
-  const handleJoinRoom = () => {
+  // Validate room code, register participant in Firebase RTDB, and join room
+  const handleJoinRoom = async () => {
     if (!guestName.trim()) {
       setNotice('Please enter your name first.');
       return;
@@ -77,7 +112,18 @@ function App() {
       return;
     }
 
-    setNotice('Room joining will be connected in the next module.');
+    try {
+      setIsJoining(true);
+      setNotice('');
+      const { roomCode: validCode } = await joinRoom(roomCode, guestName);
+      navigate(`/room/${validCode}`);
+    } catch (error) {
+      setNotice(
+        error instanceof Error ? error.message : 'Failed to join room.',
+      );
+    } finally {
+      setIsJoining(false);
+    }
   };
 
   return (
@@ -86,8 +132,7 @@ function App() {
       contentContainerStyle={styles.pageContent}
       showsVerticalScrollIndicator={false}
     >
-      {/* Navigation */}
-
+      {/* Navigation bar */}
       <View style={styles.navbar}>
         <View style={styles.logoContainer}>
           <View style={styles.logoIcon}>
@@ -104,8 +149,7 @@ function App() {
         )}
       </View>
 
-
-      {/* Hero */}
+      {/* Hero section */}
       <View
         style={[
           styles.hero,
@@ -132,19 +176,27 @@ function App() {
             videos and enjoy every moment in perfect sync.
           </Text>
 
+          {/* Display name input */}
           <View style={styles.nameInputContainer}>
             <Text style={styles.inputLabel}>YOUR DISPLAY NAME</Text>
 
             <TextInput
               value={guestName}
-              onChangeText={setGuestName}
+              onChangeText={value => {
+                setGuestName(value);
+                if (notice) {
+                  setNotice('');
+                }
+              }}
               placeholder="Enter your name"
               placeholderTextColor={Colors.textSecondary}
               style={styles.input}
               maxLength={24}
+              editable={!isBusy}
             />
           </View>
 
+          {/* Create and join room actions */}
           <View
             style={[
               styles.actions,
@@ -153,13 +205,15 @@ function App() {
           >
             <Pressable
               onPress={handleCreateRoom}
+              disabled={isBusy}
               style={({ pressed }) => [
                 styles.createButton,
                 pressed && styles.buttonPressed,
+                isBusy && styles.buttonDisabled,
               ]}
             >
               <Text style={styles.createButtonText}>
-                + Create a Room
+                {isCreating ? 'Creating...' : '+ Create a Room'}
               </Text>
             </Pressable>
 
@@ -168,23 +222,30 @@ function App() {
                 value={roomCode}
                 onChangeText={value => {
                   setRoomCode(value.toUpperCase());
-                  setNotice('');
+                  if (notice) {
+                    setNotice('');
+                  }
                 }}
                 placeholder="Enter room code"
                 placeholderTextColor={Colors.textSecondary}
                 autoCapitalize="characters"
                 style={styles.roomInput}
                 maxLength={12}
+                editable={!isBusy}
               />
 
               <Pressable
                 onPress={handleJoinRoom}
+                disabled={isBusy}
                 style={({ pressed }) => [
                   styles.joinButton,
                   pressed && styles.buttonPressed,
+                  isBusy && styles.buttonDisabled,
                 ]}
               >
-                <Text style={styles.joinButtonText}>Join</Text>
+                <Text style={styles.joinButtonText}>
+                  {isJoining ? 'Joining...' : 'Join'}
+                </Text>
               </Pressable>
             </View>
           </View>
@@ -194,7 +255,7 @@ function App() {
           ) : null}
         </View>
 
-        {/* Hero visual */}
+        {/* Hero preview card */}
         <View style={styles.visualContainer}>
           <View style={styles.visualGlow} />
 
@@ -205,7 +266,7 @@ function App() {
                 <Text style={styles.liveText}>LIVE ROOM</Text>
               </View>
 
-              <Text style={styles.roomId}>WB · 2026</Text>
+              <Text style={styles.roomId}>WB · {currentYear}</Text>
             </View>
 
             <View style={styles.videoPlaceholder}>
@@ -226,12 +287,12 @@ function App() {
 
             <View style={styles.visualBottom}>
               <View style={styles.avatarGroup}>
-                {['A', 'J', 'S', '+'].map((item, index) => (
+                {PREVIEW_AVATARS.map((item, index) => (
                   <View
                     key={item}
                     style={[
                       styles.avatar,
-                      { zIndex: 4 - index },
+                      { zIndex: PREVIEW_AVATARS.length - index },
                       index === 0 && styles.avatarOne,
                       index === 1 && styles.avatarTwo,
                       index === 2 && styles.avatarThree,
@@ -257,7 +318,7 @@ function App() {
         </View>
       </View>
 
-      {/* Features */}
+      {/* Features section */}
       <View style={styles.featuresSection}>
         <View style={styles.sectionHeading}>
           <Text style={styles.sectionTitle}>
@@ -275,7 +336,7 @@ function App() {
             !isWide && styles.featuresGridNarrow,
           ]}
         >
-          {features.map(feature => (
+          {FEATURES.map(feature => (
             <View key={feature.symbol} style={styles.featureCard}>
               <Text style={styles.featureNumber}>
                 {feature.symbol}
@@ -302,6 +363,19 @@ function App() {
         <Text style={styles.footerBrand}>WatchBuddy</Text>
       </View>
     </ScrollView>
+  );
+}
+
+/**
+ * Root application router.
+ */
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<HomeScreen />} />
+      <Route path="/room/:roomCode" element={<RoomScreen />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 
@@ -340,12 +414,6 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontSize: 22,
     fontFamily: Fonts.bold,
-    fontWeight: '700',
-  },
-  logoText: {
-    color: Colors.text,
-    fontFamily: Fonts.bold,
-    fontSize: 22,
     fontWeight: '700',
   },
   navTagline: {
@@ -491,6 +559,9 @@ const styles = StyleSheet.create({
   buttonPressed: {
     opacity: 0.75,
   },
+  buttonDisabled: {
+    opacity: 0.55,
+  },
   notice: {
     color: Colors.accent,
     fontFamily: Fonts.regular,
@@ -551,32 +622,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceSecondary,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  playCircle: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  playIcon: {
-    color: Colors.text,
-    fontSize: 22,
-    marginLeft: 4,
-  },
-  videoTitle: {
-    color: Colors.text,
-    fontFamily: Fonts.bold,
-    fontSize: 19,
-    fontWeight: '700',
-  },
-  videoSubtitle: {
-    color: Colors.textSecondary,
-    fontFamily: Fonts.regular,
-    fontSize: 12,
-    marginTop: 6,
   },
   visualBottom: {
     flexDirection: 'row',
@@ -713,19 +758,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
-
-  brandTextContainer: {
-    overflow: 'hidden',
-    justifyContent: 'center',
-  },
-
-  brandText: {
-    color: Colors.text,
-    fontFamily: Fonts.bold,
-    fontSize: 22,
-    fontWeight: '700',
-  },
-
 });
 
 export default App;
